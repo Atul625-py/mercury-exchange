@@ -90,6 +90,13 @@ void Application::run()
     IMGUI_CHECKVERSION();
 
     ImGui::CreateContext();
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    style.ScaleAllSizes(1.20f);
+    style.WindowRounding = 8.0f;
+    style.FrameRounding = 6.0f;
+    style.FramePadding = ImVec2(8.0f, 6.0f);
+    style.ItemSpacing = ImVec2(10.0f, 10.0f);
 
     ImGuiIO& io =
         ImGui::GetIO();
