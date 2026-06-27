@@ -1,24 +1,14 @@
 include(FetchContent)
 
-#===============================================================================
-# GoogleTest
-#===============================================================================
-
 FetchContent_Declare(
-
     googletest
-
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.14.0
+    GIT_TAG v1.15.2
 )
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
-
-#===============================================================================
-# Tests
-#===============================================================================
 
 add_executable(
 
@@ -42,18 +32,6 @@ target_include_directories(
     PRIVATE
 
     ..
-)
-
-target_compile_options(
-
-    mercury_tests
-
-    PRIVATE
-
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
 )
 
 target_link_libraries(

@@ -1,16 +1,16 @@
 #pragma once
 
 #include "../exchange/gateway/gateway.hpp"
+#include "../infrastructure/threading/engine_thread.hpp"
 
 namespace mercury::app
 {
 
 //------------------------------------------------------------------------------
-// Coordinates the lifetime of the Mercury Exchange application.
+// Owns the lifetime of the Mercury Exchange application.
 //
-// The Application owns the top-level components of the system and will later
-// initialize the engine thread, dashboard, and networking layer. For now it
-// serves as the entry point into the exchange core.
+// The application initializes the graphical interface, starts the engine
+// thread and coordinates shutdown.
 //------------------------------------------------------------------------------
 class Application
 {
@@ -31,6 +31,8 @@ public:
 private:
 
     mercury::exchange::Gateway gateway_;
+
+    mercury::threading::EngineThread engine_thread_;
 };
 
 } // namespace mercury::app

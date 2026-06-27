@@ -1,34 +1,46 @@
 #pragma once
 
-#include "../market/market_publisher.hpp"
+#include "../exchange/gateway/gateway.hpp"
 
 namespace mercury::ui
 {
 
+//------------------------------------------------------------------------------
+// Renders the Mercury Exchange dashboard.
+//
+// The dashboard is responsible only for visualization and user interaction.
+// All business logic remains inside the exchange core.
+//------------------------------------------------------------------------------
 class Dashboard
 {
 public:
 
-    Dashboard();
+    explicit Dashboard(
+        mercury::exchange::Gateway& gateway);
 
-    ~Dashboard();
+    Dashboard(const Dashboard&) = delete;
+
+    Dashboard& operator=(const Dashboard&) = delete;
+
+    ~Dashboard() = default;
 
 public:
 
-    void initialize();
-
-    void render(
-        const mercury::market::MarketPublisher& publisher,
-        std::uint64_t orders_processed,
-        std::uint64_t trades_executed);
-
-    [[nodiscard]]
-    bool should_close() const;
-
-    void shutdown();
+    void render();
 
 private:
 
+    void render_order_entry();
+
+    void render_order_book();
+
+    void render_recent_trades();
+
+    void render_statistics();
+
+private:
+
+    mercury::exchange::Gateway& gateway_;
 };
 
-}
+} // namespace mercury::ui

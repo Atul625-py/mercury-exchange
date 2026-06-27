@@ -3,16 +3,18 @@ cmake_minimum_required(VERSION 3.20)
 project(
     MercuryExchange
     VERSION 1.0.0
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
-#===============================================================================
+#==============================================================================
 # C++
-#===============================================================================
+#==============================================================================
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -20,17 +22,15 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-#===============================================================================
-# macOS
-#===============================================================================
+#==============================================================================
+# Threads
+#==============================================================================
 
-if(APPLE)
-    add_compile_definitions(GL_SILENCE_DEPRECATION)
-endif()
+find_package(Threads REQUIRED)
 
-#===============================================================================
-# Dependencies
-#===============================================================================
+#==============================================================================
+# FetchContent
+#==============================================================================
 
 include(FetchContent)
 
@@ -41,7 +41,7 @@ include(FetchContent)
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.3.8
+    GIT_TAG 3.3.9
 )
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -57,16 +57,17 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.90.4
+    GIT_TAG v1.91.0
 )
 
 FetchContent_MakeAvailable(imgui)
 
-#===============================================================================
-# ImGui Library
-#===============================================================================
+#==============================================================================
+# Dear ImGui Library
+#==============================================================================
 
 add_library(
+
     imgui_lib STATIC
 
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -79,21 +80,26 @@ add_library(
 )
 
 target_include_directories(
+
     imgui_lib
-    SYSTEM PUBLIC
+
+    PUBLIC
+
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
 
 target_link_libraries(
+
     imgui_lib
-    PRIVATE
+
+    PUBLIC
     glfw
 )
 
-#===============================================================================
-# Mercury Engine
-#===============================================================================
+#==============================================================================
+# Mercury Exchange
+#==============================================================================
 
 add_executable(
 
@@ -102,6 +108,9 @@ add_executable(
     app/main.cpp
     app/application.cpp
 
+    ui/dashboard.cpp
+
+    infrastructure/threading/engine_thread.cpp
 
     exchange/orderbook/order_book.cpp
     exchange/matching/matching_engine.cpp
@@ -118,32 +127,6 @@ target_include_directories(
     .
 )
 
-target_compile_options(
-
-    mercury_exchange
-
-    PRIVATE
-
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
-)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-
-    target_compile_options(
-
-        mercury_exchange
-
-        PRIVATE
-
-        -O3
-        -march=native
-    )
-
-endif()
-
 target_link_libraries(
 
     mercury_exchange
@@ -152,9 +135,23 @@ target_link_libraries(
 
     imgui_lib
     glfw
+    Threads::Threads
 )
 
+#------------------------------------------------------------------------------
+# macOS
+#------------------------------------------------------------------------------
+
 if(APPLE)
+
+    target_compile_definitions(
+
+        mercury_exchange
+
+        PRIVATE
+
+        GL_SILENCE_DEPRECATION
+    )
 
     target_link_libraries(
 
@@ -162,28 +159,17 @@ if(APPLE)
 
         PRIVATE
 
-        "-framework OpenGL"
         "-framework Cocoa"
+        "-framework OpenGL"
         "-framework IOKit"
         "-framework CoreVideo"
     )
 
-else()
-
-    target_link_libraries(
-
-        mercury_exchange
-
-        PRIVATE
-
-        GL
-    )
-
 endif()
 
-#===============================================================================
+#==============================================================================
 # Tests
-#===============================================================================
+#==============================================================================
 
 enable_testing()
 
