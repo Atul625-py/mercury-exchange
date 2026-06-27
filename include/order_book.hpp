@@ -3,25 +3,25 @@
 #include "types.hpp"
 #include <map>
 #include <unordered_map>
-#include <vector>
+#include <array>
 
-class OrderBook {
+class OrderBook 
+{
 public:
-    // A single node inside our price-level FIFO queue
-    struct BookOrder {
+    struct BookOrder 
+    {
         OrderID order_id;
         Price price;
         Quantity quantity;
         Side side;
         uint64_t timestamp;
         
-        // Doubly linked list pointers for O(1) removals on cancellations
         BookOrder* next{nullptr};
         BookOrder* prev{nullptr};
     };
 
-    // Represents a single price tier (e.g., all buy orders at $100.50)
-    struct LimitLevel {
+    struct LimitLevel 
+    {
         Price price;
         Quantity total_volume{0};
         uint32_t order_count{0};
@@ -29,31 +29,38 @@ public:
         BookOrder* tail{nullptr};
     };
 
+    // Statically allocated array for generating trades out of the critical path
+    static constexpr size_t MAX_TRADES_PER_ORDER = 128;
+    using TradeArray = std::array<Trade, MAX_TRADES_PER_ORDER>;
+
 public:
-    OrderBook() = default;
+    OrderBook();
     ~OrderBook();
 
-    // Disable copying to protect our raw pointer allocations and prevent performance dips
     OrderBook(const OrderBook&) = delete;
     OrderBook& operator=(const OrderBook&) = delete;
 
-    // Core Matching Engine API
-    std::vector<Trade> limit_order(OrderID id, Side side, Price price, Quantity quantity);
+    // Execution profile: accepts pre-allocated array storage to guarantee 0 heap allocations
+    size_t limit_order(OrderID id, Side side, Price price, Quantity quantity, TradeArray& trade_buffer);
     void cancel_order(OrderID id);
 
-    // Getters for our upcoming UI panel
     Price get_best_bid() const;
     Price get_best_ask() const;
 
 private:
-    // Bids are sorted highest-to-lowest (std::greater), Asks lowest-to-highest (std::less)
-    std::map<Price, LimitLevel, std::greater<Price>> bid_levels_;
-    std::map<Price, LimitLevel, std::less<Price>> ask_levels_;
-
-    // Fast lookup map tracking where an order lives for O(1) cancellations
-    std::unordered_map<OrderID, BookOrder*> order_registry_;
-
-    // Private helper methods to manipulate our internal queues
     void append_to_level(LimitLevel& level, BookOrder* order);
     void remove_from_level(BookOrder* order);
+
+    // Memory Pool Mechanics
+    static constexpr size_t POOL_SIZE = 102400; // Capacity for 102,400 concurrent resting orders
+    std::array<BookOrder, POOL_SIZE> order_pool_;
+    std::array<size_t, POOL_SIZE> free_nodes_stack_;
+    size_t pool_index_{POOL_SIZE};
+
+    BookOrder* allocate_node();
+    void deallocate_node(BookOrder* node);
+
+    std::map<Price, LimitLevel, std::greater<Price>> bid_levels_;
+    std::map<Price, LimitLevel, std::less<Price>> ask_levels_;
+    std::unordered_map<OrderID, BookOrder*> order_registry_;
 };
