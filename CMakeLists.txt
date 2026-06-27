@@ -138,6 +138,39 @@ target_link_libraries(
     Threads::Threads
 )
 
+#==============================================================================
+# Benchmark
+#==============================================================================
+
+add_executable(
+
+    mercury_benchmark
+
+    benchmark/benchmark.cpp
+
+    exchange/orderbook/order_book.cpp
+    exchange/matching/matching_engine.cpp
+    exchange/risk/risk_engine.cpp
+    exchange/gateway/gateway.cpp
+)
+
+target_include_directories(
+
+    mercury_benchmark
+
+    PRIVATE
+
+    .
+)
+
+target_link_libraries(
+
+    mercury_benchmark
+
+    PRIVATE
+
+    Threads::Threads
+)
 #------------------------------------------------------------------------------
 # macOS
 #------------------------------------------------------------------------------
