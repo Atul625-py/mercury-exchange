@@ -1,8 +1,10 @@
-#include <iostream>
+#include "application.hpp"
 
 int main()
 {
-    std::cout << "Mercury Exchange Engine\n";
+    mercury::app::Application application;
+
+    application.run();
 
     return 0;
 }

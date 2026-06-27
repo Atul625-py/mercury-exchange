@@ -7,7 +7,7 @@ project(
 )
 
 #===============================================================================
-# Compiler
+# C++
 #===============================================================================
 
 set(CMAKE_CXX_STANDARD 20)
@@ -20,22 +20,23 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-
 #===============================================================================
 # macOS
 #===============================================================================
 
 if(APPLE)
-
     add_compile_definitions(GL_SILENCE_DEPRECATION)
-
 endif()
 
 #===============================================================================
-# Fetch GLFW
+# Dependencies
 #===============================================================================
 
 include(FetchContent)
+
+#------------------------------------------------------------------------------
+# GLFW
+#------------------------------------------------------------------------------
 
 FetchContent_Declare(
     glfw
@@ -49,9 +50,9 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(glfw)
 
-#===============================================================================
-# Fetch Dear ImGui
-#===============================================================================
+#------------------------------------------------------------------------------
+# Dear ImGui
+#------------------------------------------------------------------------------
 
 FetchContent_Declare(
     imgui
@@ -79,22 +80,19 @@ add_library(
 
 target_include_directories(
     imgui_lib
-
     SYSTEM PUBLIC
-
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
 
 target_link_libraries(
     imgui_lib
-
     PRIVATE
     glfw
 )
 
 #===============================================================================
-# Mercury
+# Mercury Engine
 #===============================================================================
 
 add_executable(
@@ -102,46 +100,15 @@ add_executable(
     mercury_exchange
 
     app/main.cpp
+    app/application.cpp
+
 
     exchange/orderbook/order_book.cpp
-    exchange/risk/risk_engine.cpp
     exchange/matching/matching_engine.cpp
+    exchange/risk/risk_engine.cpp
     exchange/gateway/gateway.cpp
 )
 
-
-if(MSVC)
-
-    target_compile_options(
-        mercury_exchange
-        PRIVATE
-        /W4
-        /WX
-    )
-
-else()
-
-    target_compile_options(
-        mercury_exchange
-        PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Werror
-    )
-
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-
-        target_compile_options(
-            mercury_exchange
-            PRIVATE
-            -O3
-            -march=native
-        )
-
-    endif()
-
-endif()
 target_include_directories(
 
     mercury_exchange
@@ -150,6 +117,32 @@ target_include_directories(
 
     .
 )
+
+target_compile_options(
+
+    mercury_exchange
+
+    PRIVATE
+
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Werror
+)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+
+    target_compile_options(
+
+        mercury_exchange
+
+        PRIVATE
+
+        -O3
+        -march=native
+    )
+
+endif()
 
 target_link_libraries(
 
@@ -192,6 +185,6 @@ endif()
 # Tests
 #===============================================================================
 
-# enable_testing()
+enable_testing()
 
-# add_subdirectory(tests)
+add_subdirectory(tests)

@@ -1,19 +1,28 @@
 #pragma once
 
 #include "../exchange/gateway/gateway.hpp"
-#include "../infrastructure/logging/trade_logger.hpp"
-#include "../ui/dashboard.hpp"
 
 namespace mercury::app
 {
 
+//------------------------------------------------------------------------------
+// Coordinates the lifetime of the Mercury Exchange application.
+//
+// The Application owns the top-level components of the system and will later
+// initialize the engine thread, dashboard, and networking layer. For now it
+// serves as the entry point into the exchange core.
+//------------------------------------------------------------------------------
 class Application
 {
 public:
 
     Application();
 
-    ~Application();
+    Application(const Application&) = delete;
+
+    Application& operator=(const Application&) = delete;
+
+    ~Application() = default;
 
 public:
 
@@ -21,19 +30,7 @@ public:
 
 private:
 
-    void initialize();
-
-    void shutdown();
-
-    void launch_threads();
-
-private:
-
-    exchange::Gateway gateway_;
-
-    infrastructure::TradeLogger trade_logger_;
-
-    ui::Dashboard dashboard_;
+    mercury::exchange::Gateway gateway_;
 };
 
-}
+} // namespace mercury::app
