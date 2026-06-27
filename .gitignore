@@ -1,0 +1,61 @@
+# ==========================================
+# Compilation & Build Outputs
+# ==========================================
+build/
+.build/
+out/
+bin/
+lib/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ==========================================
+# IDEs and Text Editors
+# ==========================================
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# VS Code / CLion
+.vscode/
+.idea/
+cmake-build-*/
+
+# ==========================================
+# Language Server Protocol (LSP)
+# ==========================================
+.clangd/
+compile_commands.json
+
+# ==========================================
+# Operating System Files
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.Trashes
+
+# ==========================================
+# Package Managers & Dependencies
+# ==========================================
+vcpkg/
+vcpkg_installed/
+.vcpkg-root
+
+# ==========================================
+# Test & Profiling Reports
+# ==========================================
+*.log
+*.perf
+*.gmon
+gmon.out
+
