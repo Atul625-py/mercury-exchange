@@ -1,41 +1,44 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <vector>
+#include <algorithm>
 #include "order_book.hpp"
 #include "lock_free_queue.hpp"
 
-// Define a safe payload package for our queue
 struct QueueEvent
 {
     OrderID order_id;
     Side side;
     Price price;
     Quantity quantity;
-    bool is_poison_pill{false}; // Signal to cleanly shut down the background thread
+    uint64_t enqueue_time;      // Track exactly when the gateway pushed it
+    bool is_poison_pill{false};
 };
 
 int main()
 {
     std::cout << "========================================\n";
-    std::cout << "  Mercury Multithreaded Engine Run      \n";
+    std::cout << "  Mercury Latency Telemetry Benchmark   \n";
     std::cout << "========================================\n";
 
-    // Instantiating a 1024-capacity lock-free pipe
-    LockFreeQueue<QueueEvent, 1024> engine_queue;
+    LockFreeQueue<QueueEvent, 4096> engine_queue;
     OrderBook book;
 
     std::atomic<bool> engine_running{true};
-    uint64_t total_trades_executed = 0;
+    
+    // Dynamic vector to collect our latency samples (in nanoseconds)
+    std::vector<uint64_t> latency_samples;
+    latency_samples.reserve(100000); 
 
     // ---------------------------------------------------------
-    // 1. SPIN UP THE BACKGROUND MATCHING ENGINE THREAD
+    // 1. ENGINE THREAD WITH LATENCY TRACKING
     // ---------------------------------------------------------
     std::thread engine_thread([&]()
     {
         QueueEvent event;
         while (engine_running)
         {
-            // Spin-lock loop: constantly poll the queue for incoming data
             if (engine_queue.dequeue(event))
             {
                 if (event.is_poison_pill)
@@ -43,53 +46,87 @@ int main()
                     break;
                 }
 
-                auto trades = book.limit_order(event.order_id, event.side, event.price, event.quantity);
-                total_trades_executed += trades.size();
+                // Match order
+                book.limit_order(event.order_id, event.side, event.price, event.quantity);
+                
+                // Capture current time instantly after processing
+                uint64_t dequeue_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+                
+                // Calculate total transit + execution time
+                if (dequeue_time > event.enqueue_time)
+                {
+                    latency_samples.push_back(dequeue_time - event.enqueue_time);
+                }
             }
         }
     });
 
     // ---------------------------------------------------------
-    // 2. MAIN THREAD ACTS AS THE ORDER GATEWAY
+    // 2. GATEWAY THREAD FLOODING WITH TIMESTAMPING
     // ---------------------------------------------------------
-    std::cout << "[Gateway] Flooding engine with orders...\n";
+    const uint64_t total_orders = 50000;
+    std::cout << "[Gateway] Streaming " << total_orders << " orders into the exchange...\n";
 
-    // Stack up 500 Ask orders at $100.00
-    for (uint64_t i = 1; i <= 500; ++i)
+    // Feed Sell side
+    for (uint64_t i = 1; i <= total_orders; ++i)
     {
         QueueEvent sell_order{
             .order_id = i,
             .side = Side::SELL,
             .price = 10000,
-            .quantity = 10
+            .quantity = 5,
+            .enqueue_time = static_cast<uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count())
         };
-        while (!engine_queue.enqueue(sell_order)) { /* Spin if queue is temporarily full */ }
+        while (!engine_queue.enqueue(sell_order)) {}
     }
 
-    // Stack up 500 crossing Buy orders at $100.00 to trigger immediate matches
-    for (uint64_t i = 501; i <= 1000; ++i)
+    // Feed crossing Buy side
+    for (uint64_t i = total_orders + 1; i <= total_orders * 2; ++i)
     {
         QueueEvent buy_order{
             .order_id = i,
             .side = Side::BUY,
             .price = 10000,
-            .quantity = 10
+            .quantity = 5,
+            .enqueue_time = static_cast<uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count())
         };
-        while (!engine_queue.enqueue(buy_order)) { /* Spin if queue is temporarily full */ }
+        while (!engine_queue.enqueue(buy_order)) {}
     }
 
-    // Send a poison pill to cleanly stop our engine thread loop
+    // Shut down engine thread cleanly
     QueueEvent poison_pill{.is_poison_pill = true};
     while (!engine_queue.enqueue(poison_pill)) {}
 
-    // Join the thread back to prevent application crashes
     if (engine_thread.joinable())
     {
         engine_thread.join();
     }
 
-    std::cout << "[Gateway] Simulation Complete.\n";
-    std::cout << "Total Trades Processed Asynchronously: " << total_trades_executed << "\n";
+    std::cout << "[Gateway] Benchmark complete. Analyzing performance profile...\n\n";
+
+    // ---------------------------------------------------------
+    // 3. COMPUTE METRICS (P50, P90, P99)
+    // ---------------------------------------------------------
+    if (!latency_samples.empty())
+    {
+        std::sort(latency_samples.begin(), latency_samples.end());
+
+        size_t size = latency_samples.size();
+        double p50 = latency_samples[static_cast<size_t>(size * 0.50)];
+        double p90 = latency_samples[static_cast<size_t>(size * 0.90)];
+        double p99 = latency_samples[static_cast<size_t>(size * 0.99)];
+
+        std::cout << "--- LATENCY PROFILE ---\n";
+        std::cout << "Total Orders Processed : " << size << "\n";
+        std::cout << "P50 (Median Latency)   : " << (p50 / 1000.0) << " microseconds\n";
+        std::cout << "P90 Latency            : " << (p90 / 1000.0) << " microseconds\n";
+        std::cout << "P99 (Tail Latency)     : " << (p99 / 1000.0) << " microseconds\n";
+        std::cout << "-----------------------\n";
+    }
+    else
+    {
+        std::cout << "Error: No latency samples collected.\n";
+    }
 
     return 0;
 }
