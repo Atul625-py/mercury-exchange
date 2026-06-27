@@ -1,0 +1,4 @@
+add_executable(engine_tests test_main.cpp)
+target_link_libraries(engine_tests gtest_main)
+include(GoogleTest)
+gtest_discover_tests(engine_tests)
